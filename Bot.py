@@ -16,7 +16,7 @@ load_dotenv()
 bot_token = getenv("BOT_TOKEN")
 bot = Bot(bot_token)
 dp = Dispatcher(bot)
-user_service = UserService(redis.Redis(decode_responses=True))
+user_service = UserService(redis.Redis(host=getenv("REDIS_HOST"), port=int(getenv("REDIS_PORT")) ,decode_responses=True))
 audio_downloader = AudioDownloader()
 
 
