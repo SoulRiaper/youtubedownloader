@@ -11,8 +11,4 @@ services:
       - redis
 
   redis:
-    # Имя образа. Здесь мы используем базу данных Postgres
     image: redis:latest
-    environment:
-
-    volumes:
