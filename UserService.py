@@ -42,3 +42,13 @@ class UserService:
 
     def delete_user_urls(self, user_id: str):
         self.user_cache_store.delete(f"usr:{user_id}")
+
+    def add_user_playlist(self, user_id: str, playlist_urls: list[str]):
+        if self.is_in_download(user_id):
+            user = self.get_user(user_id)
+            for playlist_url in playlist_urls:
+                if playlist_url not in user['url_list']:
+                    user["url_list"].append(playlist_url)
+            self.update_user(user_id, user)
+        else:
+            raise UserNoneException

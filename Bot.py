@@ -6,7 +6,7 @@ from aiogram.dispatcher import Dispatcher
 from aiogram.utils import executor
 from dotenv import load_dotenv
 from os import getenv
-
+from YouTubeInformationService import YouTubeInfo
 import Keyboards
 from ProjectExceptions import *
 from UserService import UserService
@@ -16,6 +16,7 @@ load_dotenv()
 bot_token = getenv("BOT_TOKEN")
 bot = Bot(bot_token)
 dp = Dispatcher(bot)
+yt_info = YouTubeInfo(getenv("YTKEY"))
 user_service = UserService(redis.Redis(host=getenv("REDIS_HOST"), port=int(getenv("REDIS_PORT")) ,decode_responses=True))
 audio_downloader = AudioDownloader()
 
@@ -41,6 +42,12 @@ async def start_download_music(message: types.Message):
                                reply_markup=Keyboards.start_download_keyboard)
 
 
+@dp.message_handler(commands=["add_playlist"])
+async def add_user_playlist(message: types.Message):
+    await bot.send_message(message.chat.id, "Присылай мне ссылку на плейлист и я его добавлю в твою очередь загрузки",
+                           reply_markup=Keyboards.start_download_keyboard)
+
+
 @dp.message_handler(commands=["send"])
 async def start_download_video(message: types.Message):
     await bot.send_message(message.chat.id, "Загружаю видео (поока не работает)")
@@ -64,7 +71,7 @@ async def handle_all(message: types.Message):
     user_id = message.chat.id
     txt = message.text
     print(f"[{datetime.datetime.now()}]: user[{user_id}] send: {txt}")
-    if txt.startswith("https://"):
+    if txt.startswith("https://") and not txt.__contains__("playlist"):
         try:
             user_service.add_url_to_user(user_id, url=txt)
             await bot.send_message(user_id, "Хорошо, можете отправить еще ссылку, или  загрузить уже имеющиеся",
@@ -75,6 +82,19 @@ async def handle_all(message: types.Message):
         except UrlAlreadyExcepted:
             await bot.send_message(user_id, "Такая ссылка уже есть!",
                                    reply_markup=Keyboards.start_download_keyboard)
+
+    elif txt.startswith("https://") and txt.__contains__("playlist"):
+        try:
+            playlist_urls = yt_info.get_playlist_ids(txt)
+            user_service.add_user_playlist(user_id, playlist_urls)
+        except UserNoneException:
+            await bot.send_message(user_id, "Вы еще не выбрали что хотите загружать видео или музыку!",
+                                   reply_markup=Keyboards.select_mode_keyboard)
+        except:
+            await bot.send_message(user_id, "Упс... Что-то навернулось!")
+        else:
+            await bot.send_message(user_id, "Ваш плейлист добавлен")
+
 
     elif txt == "Музыка":
         await start_download_music(message)
